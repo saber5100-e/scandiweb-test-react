@@ -41,6 +41,7 @@ export default function Categories() {
             try {
                 const res = await fetch(`${HTTP_SERVER}/graphql`, {
                     method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         query: `query Category {
                             category(category_name: "${upperCaseId}") {
@@ -62,10 +63,7 @@ export default function Categories() {
                                 }
                             }
                         }`
-                    }),
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
+                    })
                 });
 
                 if (!res.ok) {
@@ -91,6 +89,7 @@ export default function Categories() {
         try {
             const res = await fetch(`${HTTP_SERVER}/graphql`, {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     query: `query Products {
                         product(id: "${id}") {
@@ -118,10 +117,7 @@ export default function Categories() {
                             }
                         }
                     }`
-                }),
-                headers: {
-                    "Content-Type": "application/json"
-                }
+                })
             });
 
             if (!res.ok) {

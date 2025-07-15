@@ -39,9 +39,7 @@ const { totalPrice, setTotalPrice } = cartContext;
       try {
         const res = await fetch(`${HTTP_SERVER}/graphql`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: `mutation($input: [CartItemInput!]!) {
               order(input: $input) {

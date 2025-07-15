@@ -45,10 +45,10 @@ export default function Header({ showCart, setShowCart }: Props) {
       try {
         const res = await fetch(`${HTTP_SERVER}/graphql`, {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: "query Categories { categories { id category_name } }"
-          }),
-          headers: { "Content-Type": "application/json" }
+          })
         });
 
         if (!res.ok) {
