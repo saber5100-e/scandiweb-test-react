@@ -1,6 +1,9 @@
 import { useContext } from "react";
+
 import CartItem from "./CartItem";
+
 import CartContext from "../context/CartContext";
+
 import useErrorHandler from "../lib/errorHandler";
 import { CartItemType } from "../lib/types";
 import { HTTP_SERVER } from "../lib/constants";
@@ -28,13 +31,13 @@ const { totalPrice, setTotalPrice } = cartContext;
     if (totalQuantity > 0) {
       const itemsForOrder = items.map(item => ({
         ID: item.id,
-        Product_name: item.Product_Name,
+        Product_name: item.product_name,
         Quantity: item.quantity,
-        Amount: item.Amount
+        Amount: item.amount
       }));
 
       try {
-        const res = await fetch(`${HTTP_SERVER}/graphql/orders`, {
+        const res = await fetch(`${HTTP_SERVER}/graphql`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -42,9 +45,9 @@ const { totalPrice, setTotalPrice } = cartContext;
           body: JSON.stringify({
             query: `mutation($input: [CartItemInput!]!) {
               order(input: $input) {
-                Total_Amount
-                ID
-                Created_At
+                total_amount
+                id
+                created_at
               }
             }`,
             variables: {
@@ -76,25 +79,33 @@ const { totalPrice, setTotalPrice } = cartContext;
 
   return (
     <div data-testid="cart-overlay" className="cart">
-      {items && items.length > 0 ? (
-        items.map(item => (
-          <CartItem
-            key={`${item.id}-${JSON.stringify(item.attributes)}`}
-            setTotalQuantity={setTotalQuantity}
-            setItems={setItems}
-            items={items}
-            item={item}
-          />
-        ))
-      ) : (
-        <p>No Items</p>
+      <h3 className="my-bag">My Bag, <span className="items-count">{totalItemsMsg}</span></h3>
+
+        {items && items.length > 0 ? (
+          items.map((item, i) => (
+            <CartItem
+              key={`${item.id}-${JSON.stringify(item.attributes)}`}
+              setTotalQuantity={setTotalQuantity}
+              setItems={setItems}
+              items={items}
+              item={item}
+              isLast={i + 1 === items.length ? 'last' : ''}
+            />
+          ))
+        ) : (
+          <p>No Items</p>
       )}
       
-      <p>total: {totalItemsMsg}</p>
-      <p data-testid="cart-total">total price: {(Math.round(totalPrice * 100) / 100).toFixed(2)}</p>
-      <button disabled={totalQuantity === 0} onClick={handleOrder} className="btn btn-primary">
-        Order
-      </button>
+      <div className="cart-total">
+        <p>total</p>
+        <span>${(Math.round(totalPrice * 100) / 100).toFixed(2)}</span>
+      </div>
+
+      <div className="cart-order">
+        <button disabled={totalQuantity === 0} onClick={handleOrder}>
+          PLACE ORDER
+        </button>
+      </div>
     </div>
   );
 }

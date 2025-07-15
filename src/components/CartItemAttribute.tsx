@@ -1,6 +1,10 @@
 import { useId } from 'react';
+
 import kebabize from '../lib/kebabize';
-import {SelectedAttributesType, ProductAttributeType} from '../lib/types';
+import {SelectedAttributesType, ProductAttributeType, AttributeComponentPropsType} from '../lib/types';
+
+import AttributeText from './AttributeText';
+import AttributeSwatch from './AttributeSwatch';
 
 type Props = {
     product_attributes: ProductAttributeType[];
@@ -13,64 +17,40 @@ export default function CartItemAttribute({ product_attributes, selectedAttribut
     return (
         <>
             {product_attributes.map(attribute => (
-                <div data-testid={`cart-item-attribute-${kebabize(attribute.Attribute_Name)}`} key={attribute.ID}>
-                    <p>{attribute.Attribute_Name}:</p>
+                <div className='product-option' data-testid={`cart-item-attribute-${kebabize(attribute.attribute_name)}`} key={attribute.id}>
+                    <label>{attribute.attribute_name}:</label>
 
-                    {attribute.Attributes_Items.map(item => {
-                        const inputId = `${idPrefix}-${attribute.ID}-${item.Primary_ID}`;
-                        const groupName = `${idPrefix}-${attribute.ID}`;
-                        const isSelected = selectedAttributes[attribute.Attribute_Name] === item.Item_Value;
-                        const classes = isSelected
-                            ? `cart-item-attribute-${attribute.Attribute_Name}-${item.ID}-selected`
-                            : `cart-item-attribute-${attribute.Attribute_Name}-${item.ID}`;
+                    <div className='btns'>
+                        {attribute.attributes_items.map(item => {
+                            const inputId = `${idPrefix}-${attribute.id}-${item.primary_id}`;
+                            const groupName = `${idPrefix}-${attribute.id}`;
+                            const isSelected = selectedAttributes[attribute.attribute_name] === item.item_value;
+                            const classes = isSelected
+                                ? `cart-item-attribute-${attribute.attribute_name}-${item.id}-selected`
+                                : `cart-item-attribute-${attribute.attribute_name}-${item.id}`;
 
-                        if (attribute.Attribute_Type !== 'swatch') {
+                            const attributeComponentProps: AttributeComponentPropsType = {
+                                isReadOnly: true,
+                                item_value: item.item_value,
+                                display_value: item.display_value,
+                                name: groupName,
+                                isSelected: isSelected,
+                                id: inputId,
+                                dataTestId: classes,
+                                setInputState: null
+                            }
+
+                            if (attribute.attribute_type !== 'swatch') {
+                                return (
+                                    <AttributeText key={item.primary_id} attributeComponentProps={attributeComponentProps}/>
+                                );
+                            }
+
                             return (
-                                <div key={item.Primary_ID}>
-                                    <input
-                                        type="radio"
-                                        className="btn-check"
-                                        id={inputId}
-                                        name={groupName}
-                                        value={item.Item_Value}
-                                        autoComplete="off"
-                                        checked={isSelected}
-                                        data-testid={classes}
-                                        readOnly
-                                    />
-                                    <label className="btn btn-outline-primary" htmlFor={inputId}>
-                                        {item.Display_Value}
-                                    </label>
-                                </div>
+                                <AttributeSwatch key={item.primary_id} attributeComponentProps={attributeComponentProps}/>
                             );
-                        }
-
-                        return (
-                            <div key={item.Primary_ID} className="d-inline-block mr-1">
-                                <input
-                                    type="radio"
-                                    id={item.Primary_ID}
-                                    name={attribute.Attribute_Name}
-                                    value={item.Item_Value}
-                                    checked={isSelected}
-                                    autoComplete="off"
-                                    className="d-none"
-                                    readOnly
-                                />
-                                <label
-                                    htmlFor={item.Primary_ID}
-                                    className="d-inline-block"
-                                    style={{
-                                        width: "32px",
-                                        height: "32px",
-                                        backgroundColor: item.Item_Value,
-                                        border: isSelected ? "2px solid #27ae60" : "1px solid #ccc",
-                                        cursor: "pointer"
-                                    }}
-                                />
-                            </div>
-                        );
-                    })}
+                        })}
+                    </div>
                 </div>
             ))}
         </>

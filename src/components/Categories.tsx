@@ -1,17 +1,20 @@
 import { useEffect, useContext, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+
 import CartContext from "../context/CartContext";
-import kebabize from "../lib/kebabize";
 import ErrorContext from "../context/ErrorContext";
+
+import kebabize from "../lib/kebabize";
 import useErrorHandler from "../lib/errorHandler";
+
+import CartVector from "./CartVector";
 
 import { ProductType, QuickShopProductType } from '../lib/types';
 import { HTTP_SERVER } from "../lib/constants";
 
-type Props = { showCart: boolean; }
-
-export default function Categories({ showCart }: Props) {
+export default function Categories() {
     const [products, setProducts] = useState<ProductType[]>([]);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
     const { id } = useParams<{ id: string }>();
     const cartContext = useContext(CartContext);
 
@@ -36,22 +39,26 @@ export default function Categories({ showCart }: Props) {
             const upperCaseId = id ? id.charAt(0).toUpperCase() + id.slice(1) : 'All';
 
             try {
-                const res = await fetch(`${HTTP_SERVER}/graphql/categories`, {
+                const res = await fetch(`${HTTP_SERVER}/graphql`, {
                     method: "POST",
                     body: JSON.stringify({
                         query: `query Category {
-                            category(Category_Name: "${upperCaseId}") {
-                                ID
-                                Product_Name
-                                In_Stock
-                                Products_gallery {
-                                    ID
-                                    Product_ID
-                                    URL
+                            category(category_name: "${upperCaseId}") {
+                                id
+                                product_name
+                                in_stock
+                                products_gallery {
+                                    url
+                                    id
                                 }
-                                Product_Prices {
-                                    Currency_Symbol
-                                    Amount
+                                product_prices {
+                                    id
+                                    amount
+                                    currency {
+                                        id
+                                        label
+                                        symbol
+                                    }
                                 }
                             }
                         }`
@@ -80,33 +87,34 @@ export default function Categories({ showCart }: Props) {
         fetchData();
     }, [id, catchedError, serverError]);
 
-    async function handleQuickShop(ID: string) {
+    async function handleQuickShop(id: string) {
         try {
-            const res = await fetch(`${HTTP_SERVER}/graphql/products`, {
+            const res = await fetch(`${HTTP_SERVER}/graphql`, {
                 method: "POST",
                 body: JSON.stringify({
-                    query: `query Product {
-                        product(id: "${ID}") {
-                            ID
-                            Product_Name
-                            In_Stock
-                            Products_gallery {
-                                ID
-                                Product_ID
-                                URL
+                    query: `query Products {
+                        product(id: "${id}") {
+                            id
+                            product_name
+                            in_stock
+                            products_gallery {
+                                url
+                                id
                             }
-                            Products_Attributes {
-                                ID
-                                Product_ID
-                                Attribute_Name
-                                Attributes_Items {
-                                    Attribute_ID
-                                    Item_Value
+                            products_attributes {
+                                id
+                                product_id
+                                attribute_name
+                                attributes_items {
+                                    item_value
+                                    attribute_id
                                 }
                             }
-                            Product_Prices {
-                                Amount
-                                Currency_Symbol
+                            product_prices {
+                                amount
+                                currency {
+                                    symbol
+                                }
                             }
                         }
                     }`
@@ -126,15 +134,15 @@ export default function Categories({ showCart }: Props) {
             const product: QuickShopProductType = data.data.product;
 
             const attributes: Record<string, string> = {};
-            if (product.Products_Attributes) {
-                product.Products_Attributes.forEach(attr => {
-                    if (attr.Attributes_Items.length > 0) {
-                        attributes[attr.ID] = attr.Attributes_Items[0].Item_Value;
+            if (product.products_attributes) {
+                product.products_attributes.forEach(attr => {
+                    if (attr.attributes_items.length > 0) {
+                        attributes[attr.id] = attr.attributes_items[0].item_value;
                     }
                 });
             }
 
-            if (product.In_Stock) {
+            if (product.in_stock) {
                 setIsError(false);
                 setMsg('');
                 const localItems: any[] = JSON.parse(localStorage.getItem('items') || '[]');
@@ -142,11 +150,11 @@ export default function Categories({ showCart }: Props) {
                 const newItem = {
                     attributes,
                     quantity: 1,
-                    id: product.ID,
-                    Product_Name: product.Product_Name,
-                    Amount: product.Product_Prices?.[0]?.Amount,
-                    Image: product.Products_gallery[0]?.URL,
-                    Symbol: product.Product_Prices?.[0]?.Currency_Symbol
+                    id: product.id,
+                    product_name: product.product_name,
+                    amount: product.product_prices?.[0]?.amount,
+                    image: product.products_gallery[0]?.url,
+                    symbol: product.product_prices?.[0]?.currency.symbol
                 };
 
                 const existingIndex = localItems.findIndex(item =>
@@ -170,37 +178,36 @@ export default function Categories({ showCart }: Props) {
     }
 
     return (
-        <div className={`container ${showCart ? 'cart-opened' : ''}`}>
-            <h1 className="page-title px-3 pt-3 mt-5">{id ? id : "All"}</h1>
-            <div className="row p-3">
+        <div className={`container mb`}>
+            <h1 className="title">{id ? id : "All"}</h1>
+
+            <div className="product-grid">
                 {products.map(product => (
-                    <div data-testid={`product-${kebabize(product.Product_Name)}`} className="col-md-4 mb-4" key={product.ID}>
-                        <div className="position-relative product-card border p-3 rounded text-center">
-                            <Link to={`/products/${product.ID}`}>
-                                <img
-                                    className={`product-image img-fluid mb-2 ${!product.In_Stock ? "grey-out" : ''}`}
-                                    src={product.Products_gallery[0]?.URL}
-                                    alt={product.Product_Name}
-                                />
-                                <h2 className="h5 product-link">{product.Product_Name}</h2>
-                            </Link>
+                    <div 
+                        onMouseEnter={() => setHoveredId(product.id)}
+                        onMouseLeave={() => setHoveredId(null)}
+                        data-testid={`product-${kebabize(product.product_name)}`}
+                        className={`product ${!product.in_stock ? 'out-of-stock' : ''} ${hoveredId === product.id ? 'shadowed' : ''}`} 
+                        key={product.id}
+                    >
+                        <Link className="unstyled-link" to={`/products/${product.id}`}>
+                            <div className="image-wrapper">
+                                <img src={product.products_gallery[0].url} alt={product.product_name}/>
+                                {product.in_stock ? '' : <div className="overlay">OUT OF STOCK</div>}
+                                {product.in_stock && hoveredId === product.id && (
+                                    <div onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleQuickShop(product.id)
+                                    }} className="cart-button">
+                                        <CartVector />
+                                    </div>
+                                    )}
+                            </div>
 
-                            <span className="d-block text-muted mb-1">
-                                {product.Product_Prices[0]?.Currency_Symbol}{product.Product_Prices[0]?.Amount}
-                            </span>
-                            <span
-                                className="text-danger d-block mb-2"
-                                style={{ visibility: product.In_Stock ? "hidden" : "visible" }}
-                            >
-                                out of stock
-                            </span>
-
-                            {product.In_Stock && (
-                                <button onClick={() => handleQuickShop(product.ID)} className="btn btn-primary btn-sm add-to-cart-btn position-absolute bottom-0 start-50 translate-middle-x">
-                                    Add to Cart
-                                </button>
-                            )}
-                        </div>
+                            <p className="h5 product-link">{product.product_name}</p>
+                            <span>{product.product_prices[0].currency.symbol}{product.product_prices[0].amount}</span>
+                        </Link>
                     </div>
                 ))}
             </div>

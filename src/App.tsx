@@ -13,6 +13,7 @@ import CartContext from './context/CartContext';
 import ErrorContext from './context/ErrorContext';
 import Alert from './components/Alert';
 import { CartItemType } from './lib/types';
+import PageOverlay from './components/PageOverlay';
 
 function App() {
   const [currentCategory, setCurrentCategory] = useState<string>('All');
@@ -36,10 +37,12 @@ function App() {
           <CartContext.Provider value={{ cartItemsState, setCartItemsState, totalPrice, setTotalPrice }}>
             <ErrorContext.Provider value={{ isError, setIsError, msg, setMsg }}>
               <Header showCart={showCart} setShowCart={setShowCart} />
+              {showCart ? <PageOverlay></PageOverlay> : ''}
+
               <Routes>
-                <Route path='/' element={<Categories showCart={showCart} />} />
-                <Route path='/:id' element={<Categories showCart={showCart} />} />
-                <Route path='/products/:id' element={<ProductPage showCart={showCart} setShowCart={setShowCart} />} />
+                <Route path='/' element={<Categories />} />
+                <Route path='/:id' element={<Categories />} />
+                <Route path='/products/:id' element={<ProductPage setShowCart={setShowCart} />} />
               </Routes>
               <Alert />
             </ErrorContext.Provider>

@@ -1,22 +1,26 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+
 import ProductImages from "./ProductImages";
-import QuantityControl from "./QuantityControl";
 import Attribute from "./Attribute";
 import CartContext from "../context/CartContext";
+
 import parse from "html-react-parser";
 import DOMPurify from "dompurify";
+
 import ErrorContext from "../context/ErrorContext";
+
 import useErrorHandler from "../lib/errorHandler";
+
 import { ProductType, AttributeSelectionsType, CartItemType } from '../lib/types'
 import { HTTP_SERVER } from "../lib/constants";
+import kebabize from "../lib/kebabize";
 
 type Props = {
-  showCart: boolean;
   setShowCart: (value: boolean) => void;
 };
 
-export default function ProductPage({ showCart, setShowCart }: Props) {
+export default function ProductPage({ setShowCart }: Props) {
   const cartContext = useContext(CartContext);
 
   if (!cartContext) {
@@ -25,7 +29,7 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
 
   const { setCartItemsState } = cartContext;
   const [product, setProduct] = useState<ProductType | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity] = useState<number>(1);
   const [attributes, setAttributes] = useState<AttributeSelectionsType>({});
 
   const errorContext = useContext(ErrorContext);
@@ -42,43 +46,45 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`${HTTP_SERVER}/graphql/products`, {
+        const res = await fetch(`${HTTP_SERVER}/graphql`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: `query Product {
               product(id: "${id}") {
-                ID
-                Product_Name
-                In_Stock
-                Description
-                Category
-                Brand
-                Products_gallery {
-                  ID
-                  Product_ID
-                  URL
-                }
-                Products_Attributes {
-                  ID
-                  Primary_ID
-                  Attribute_Name
-                  Attribute_Type
-                  Attributes_Items {
-                    Primary_ID
-                    ID
-                    Attribute_ID
-                    Display_Value
-                    Item_Value
+                  id
+                  product_name
+                  in_stock
+                  description
+                  category
+                  brand
+                  products_gallery {
+                      url
+                      id
                   }
-                }
-                Product_Prices {
-                  Currency_Label
-                  Currency_Symbol
-                  Amount 
-                }
+                  products_attributes {
+                      primary_id
+                      id
+                      attribute_name
+                      attribute_type
+                      attributes_items {
+                          primary_id
+                          id
+                          display_value
+                          item_value
+                          attribute_id
+                      }
+                  }
+                  product_prices {
+                      amount
+                      currency {
+                          id
+                          label
+                          symbol
+                      }
+                  }
               }
-            }`,
+          }`,
           }),
         });
   
@@ -92,8 +98,8 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
         setProduct(fetchedProduct);
   
         const newAttributes: AttributeSelectionsType = {};
-        fetchedProduct.Products_Attributes.forEach((attribute) => {
-          newAttributes[attribute.ID] = "";
+        fetchedProduct.products_attributes.forEach((attribute) => {
+          newAttributes[attribute.id] = "";
         });
         setAttributes(newAttributes);
       } catch (error) {
@@ -108,12 +114,6 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
     fetchData();
   }, [id, catchedError, serverError]);
 
-  function handleQuantity(newQuantity: number) {
-    if (newQuantity >= 1 && newQuantity <= 99) {
-      setQuantity(newQuantity);
-    }
-  }
-
   function addToCart() {
     const allSelected = Object.values(attributes).every((value) => value !== "");
 
@@ -123,7 +123,7 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
       return;
     }
 
-    if (product?.In_Stock) {
+    if (product?.in_stock) {
       setIsError(false);
       setMsg("");
 
@@ -132,11 +132,11 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
       const newItem: CartItemType = {
         attributes,
         quantity,
-        id: product.ID,
-        Product_Name: product.Product_Name,
-        Amount: product.Product_Prices?.[0]?.Amount || 0,
-        Image: product.Products_gallery[0]?.URL || "",
-        Symbol: product.Product_Prices?.[0]?.Currency_Symbol || "",
+        id: product.id,
+        product_name: product.product_name,
+        amount: product.product_prices?.[0]?.amount || 0,
+        image: product.products_gallery[0]?.url || "",
+        symbol: product.product_prices?.[0]?.currency.symbol || "",
       };
 
       const existingIndex = localItems.findIndex(
@@ -158,54 +158,49 @@ export default function ProductPage({ showCart, setShowCart }: Props) {
     }
   }
 
-  const isDisabled = !Object.values(attributes).every((val) => val !== "");
+  const isDisabled = !(Object.values(attributes).every((val) => val !== "") && product?.in_stock);
 
   return (
-    <div className={`container mt-5 ${showCart ? "cart-opened" : ""}`}>
-      <div className="row py-3">
-        <div className="col-md-6">
-          {product?.Products_gallery && <ProductImages images={product.Products_gallery} />}
-        </div>
-        <div className="col-md-6">
-          <h1 className="display-1">{product?.Product_Name}</h1>
-          <h6 className="display-6">Brand: {product?.Brand}</h6>
-          {!product?.In_Stock && <span className="out-of-stock mt-2">out of stock</span>}
+    <div className={`product-container mb`}>
+      <div className="product-detail">
+          {product?.products_gallery && <ProductImages images={product.products_gallery} />}
 
-          {product?.Products_Attributes?.map((attribute) => (
-            <Attribute
-              key={attribute.ID}
-              attribute={attribute}
-              setAttributes={setAttributes}
-            />
+        <div className="product-info">
+          <h2 className="display-1">{product?.product_name}</h2>
+
+          {product?.products_attributes?.map((attribute) => (
+            <div key={attribute.id} className="product-option" data-testid={`product-attribute-${kebabize(attribute.attribute_name)}`}>
+              <label>{attribute.attribute_name}: </label>
+              <div className="btns" role="group" aria-label="Basic radio toggle button group">
+              <Attribute
+                  attribute={attribute}
+                  setAttributes={setAttributes}
+                />
+              </div>
+            </div>
           ))}
 
-          {product?.Product_Prices?.[0] && (
-            <span className="price d-block">
-              Price: {product.Product_Prices[0].Amount}
-              {product.Product_Prices[0].Currency_Symbol} {product.Product_Prices[0].Currency_Label}
-            </span>
+          {product?.product_prices?.[0] && (
+            <div className="price">
+              <label>PRICE:</label>
+              <h2>{product.product_prices[0].amount} {product.product_prices[0].currency.symbol} {product.product_prices[0].currency.label}</h2>
+            </div>
           )}
-
-          <QuantityControl handleQuantity={handleQuantity} quantity={quantity} />
 
           <button
             data-testid="add-to-cart"
             onClick={addToCart}
             disabled={isDisabled}
             type="button"
-            className="btn btn-primary mb-2"
+            className="add-to-cart"
           >
             add to cart
           </button>
 
-          <div className="description">
-            {product?.Description &&
-              parse(
-                DOMPurify.sanitize(
-                  `<p data-testid='product-description'>Description:</p> ${product.Description}`
-                )
-              )}
+          <div className="description" data-testid="product-description">
+            {product?.description && parse(DOMPurify.sanitize(product.description))}
           </div>
+
         </div>
       </div>
     </div>

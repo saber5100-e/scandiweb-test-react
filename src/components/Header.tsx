@@ -1,11 +1,16 @@
 import { useContext, useEffect, useState } from "react";
-import Cart from "./Cart";
 import { Link, useLocation } from "react-router-dom";
+
 import CartContext from "../context/CartContext";
 import CategoryContext from '../context/CategoryContext';
+
 import useErrorHandler from "../lib/errorHandler";
 import {CategoriesType, ItemsType} from '../lib/types';
 import { HTTP_SERVER } from "../lib/constants";
+
+import CartVector from "./CartVector";
+
+import Cart from "./Cart";
 
 interface Props {
   showCart: boolean;
@@ -38,10 +43,10 @@ export default function Header({ showCart, setShowCart }: Props) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`${HTTP_SERVER}/graphql/categories`, {
+        const res = await fetch(`${HTTP_SERVER}/graphql`, {
           method: "POST",
           body: JSON.stringify({
-            query: "query Categories { categories { ID Category_Name } }"
+            query: "query Categories { categories { id category_name } }"
           }),
           headers: { "Content-Type": "application/json" }
         });
@@ -66,11 +71,19 @@ export default function Header({ showCart, setShowCart }: Props) {
   }, [catchedError, serverError]);
 
   useEffect(() => {
-    const pathCategory = location.pathname.toLowerCase().split('/')[1];
-    if (pathCategory && pathCategory !== currentCategory) {
-      setCurrentCategory(pathCategory);
+    const pathSegments = location.pathname.toLowerCase().split('/');
+    const firstSegment = pathSegments[1];
+  
+    const categoryNames = categories.map(cat => cat.category_name.toLowerCase());
+  
+    if (categoryNames.includes(firstSegment)) {
+      setCurrentCategory(firstSegment);
     }
-  }, [location.pathname, currentCategory, setCurrentCategory]);
+  
+    if (!categoryNames.includes(firstSegment) && currentCategory === '' && categoryNames.length > 0) {
+      setCurrentCategory(categoryNames[0]);
+    }
+  }, [categories, location.pathname, setCurrentCategory, currentCategory]);
 
   useEffect(() => {
     const localItems: ItemsType = JSON.parse(localStorage.getItem('items') || '[]');
@@ -79,7 +92,7 @@ export default function Header({ showCart, setShowCart }: Props) {
     const totalQuantity = localItems.reduce((sum, item) => sum + item.quantity, 0);
     setTotalQuantity(totalQuantity);
 
-    const totalPrice = localItems.reduce((sum, item) => sum + item.quantity * item.Amount, 0);
+    const totalPrice = localItems.reduce((sum, item) => sum + item.quantity * item.amount, 0);
     setTotalPrice(totalPrice);
   }, [cartItemsState, setTotalPrice]);
 
@@ -89,56 +102,35 @@ export default function Header({ showCart, setShowCart }: Props) {
 
   return (
     <>
-      <header className="navbar fixed-top navbar-expand-lg bg-body-tertiary">
-        <div className="container-fluid">
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarSupportedContent"
-            aria-controls="navbarSupportedContent"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-              {categories.map((category) => {
-                const isActive = category.Category_Name.toLowerCase() === currentCategory.toLowerCase();
-                const dataTestid = isActive ? "active-category-link" : "category-link";
-                const linkClasses = isActive ? "nav-link active" : "nav-link";
+      <header className="navbar">
+        <nav>
+          {categories.map((category) => {
+              const isActive = category.category_name.toLowerCase() === currentCategory.toLowerCase();
+              const dataTestid = isActive ? "active-category-link" : "category-link";
 
-                return (
-                  <li key={category.ID} className="nav-item">
-                    <Link
-                      className={linkClasses}
-                      onClick={() => setCurrentCategory(category.Category_Name)}
-                      data-testid={dataTestid}
-                      to={`/${category.Category_Name}`}
-                    >
-                      {category.Category_Name.charAt(0).toUpperCase() + category.Category_Name.slice(1)}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            <button
-              data-testid="cart-btn"
-              className="btn btn-outline-secondary position-relative"
-              onClick={handleClick}
-            >
-              {showCart ? "Hide Cart" : "Show Cart"}
-              {totalQuantity && !showCart ? (
-                <span
-                  className="position-absolute top-0 end-0 badge rounded-pill bg-danger"
-                  style={{ transform: 'translate(30%, -30%)' }}
-                >
-                  {totalQuantity > 99 ? '99+' : totalQuantity}
-                  <span className="visually-hidden">items in cart</span>
-                </span>
-              ) : null}
-            </button>
+              return (
+                <li key={category.id} className="nav-item">
+                  <Link
+                    className={isActive ? ' active' : ''}
+                    onClick={() => setCurrentCategory(category.category_name)}
+                    data-testid={dataTestid}
+                    to={`/${category.category_name}`}
+                  >
+                    {category.category_name.charAt(0).toUpperCase() + category.category_name.slice(1)}
+                  </Link>
+                </li>
+              );
+            })}
+        </nav>
+
+        <div className="logo">
+          <img src="/logo transparent.png" alt="logo" />
+        </div>
+
+        <div className="icons">
+          <div data-testid='cart-btn' onClick={handleClick} className="cart-icon-wrapper">
+            <CartVector />
+            {totalQuantity ? <span className="cart-count">{totalQuantity > 9 ? `9+` : totalQuantity}</span> : <></>}
           </div>
         </div>
       </header>

@@ -1,6 +1,9 @@
 import { useContext, useEffect, useState } from "react";
+
 import CartContext from "../context/CartContext";
+
 import CartItemAttribute from "./CartItemAttribute";
+
 import useErrorHandler from "../lib/errorHandler";
 import {ProductDetailsType, CartItemType} from '../lib/types';
 import { HTTP_SERVER } from "../lib/constants";
@@ -10,16 +13,17 @@ type Props = {
   items: CartItemType[];
   setItems: (items: CartItemType[]) => void;
   setTotalQuantity: (qty: number) => void;
+  isLast: string;
 }
 
-export default function CartItem({ item, items, setItems, setTotalQuantity }: Props) {
+export default function CartItem({ item, items, setItems, setTotalQuantity, isLast }: Props) {
   const cartContext = useContext(CartContext);
 
-    if (!cartContext) {
-      throw new Error("CartContext must be used within a CartProvider");
-    }
+  if (!cartContext) {
+    throw new Error("CartContext must be used within a CartProvider");
+  }
     
-    const { setTotalPrice, cartItemsState, setCartItemsState } = cartContext;
+  const { setTotalPrice, cartItemsState, setCartItemsState } = cartContext;
 
   const { catchedError, serverError } = useErrorHandler();
   const [fullItems, setFullItems] = useState<ProductDetailsType[]>([]);
@@ -27,29 +31,30 @@ export default function CartItem({ item, items, setItems, setTotalQuantity }: Pr
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`${HTTP_SERVER}/graphql/categories`, {
+        const res = await fetch(`${HTTP_SERVER}/graphql`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: `query Category {
-              category(Category_Name: "All") {
-                ID
-                Products_Attributes {
-                  ID
-                  Attribute_Name
-                  Attribute_Type
-                  Attributes_Items {
-                    Primary_ID
-                    ID
-                    Attribute_ID
-                    Display_Value
-                    Item_Value
+              category(category_name: "all") {
+                  id
+                  __typename
+                  products_attributes {
+                      id
+                      attribute_name
+                      attribute_type
+                      attributes_items {
+                          primary_id
+                          id
+                          item_value
+                          attribute_id
+                          display_value
+                      }
                   }
-                }
               }
-            }`
-          })
-        });
+          }`
+        })
+      });
 
         if (!res.ok) {
           serverError(res.status);
@@ -57,7 +62,7 @@ export default function CartItem({ item, items, setItems, setTotalQuantity }: Pr
         }
 
         const data = await res.json();
-        const matchedItems = data.data.category.filter((fullItem: ProductDetailsType) => fullItem.ID === item.id);
+        const matchedItems = data.data.category.filter((fullItem: ProductDetailsType) => fullItem.id === item.id);
         setFullItems(matchedItems);
       } catch (error) {
         if (error instanceof Error) {
@@ -73,8 +78,7 @@ export default function CartItem({ item, items, setItems, setTotalQuantity }: Pr
 
   function handleRemove() {
     const updatedCart = (cartItemsState as CartItemType[]).filter(
-      cartItem =>
-        !(cartItem.id === item.id && JSON.stringify(cartItem.attributes) === JSON.stringify(item.attributes))
+      cartItem => !(cartItem.id === item.id && JSON.stringify(cartItem.attributes) === JSON.stringify(item.attributes))
     );
     setCartItemsState(updatedCart);
 
@@ -112,48 +116,50 @@ export default function CartItem({ item, items, setItems, setTotalQuantity }: Pr
 
   function updateTotals(cart: CartItemType[]) {
     const totalQuantity = cart.reduce((sum, i) => sum + i.quantity, 0);
-    const totalPrice = cart.reduce((sum, i) => sum + i.quantity * i.Amount, 0);
+    const totalPrice = cart.reduce((sum, i) => sum + i.quantity * i.amount, 0);
     setTotalQuantity(totalQuantity);
     setTotalPrice(totalPrice);
   }
 
   return (
-    <div>
-      <p className="cart-product-name">{item.Product_Name}</p>
-      <img alt={item.Product_Name} className="img-fluid" src={item.Image} />
-      <p data-testid="cart-item-amount">
-        price: {item.Symbol}
-        {item.Amount}
-      </p>
-      <p>
-        quantity:
-        <button
-          onClick={() => handleQuantity("+")}
-          className="btn btn-primary quantity-btn"
-          data-testid="cart-item-amount-increase"
-        >
-          +
-        </button>
-        {item.quantity}
-        <button
-          onClick={() => handleQuantity("-")}
-          className="btn btn-primary quantity-btn"
-          data-testid="cart-item-amount-decrease"
-        >
-          -
-        </button>
-      </p>
-      {fullItems.length > 0 &&
-        fullItems.map(fullItem => (
-          <CartItemAttribute
-            key={fullItem.ID}
-            selectedAttributes={item.attributes}
-            product_attributes={fullItem.Products_Attributes}
-          />
-        ))}
-      <button className="btn btn-primary cart-btn" onClick={handleRemove}>
-        remove item
-      </button>
+    <div className={`cart-item ${isLast}`}>
+       <div className="cart-details">
+          <div className="item-details">
+              <h2>{item.product_name}</h2>
+              <h2 data-testid="cart-item-amount" className="price">{item.symbol}{item.amount}</h2>
+
+              {fullItems.length > 0 &&
+                fullItems.map(fullItem => (
+                  <CartItemAttribute
+                    key={fullItem.id}
+                    selectedAttributes={item.attributes}
+                    product_attributes={fullItem.products_attributes}
+                  />
+                ))}
+          </div>
+       </div>
+
+       <div className="item-quantity">
+                <button
+                  className="btn"
+                  onClick={() => handleQuantity("+")}
+                  data-testid="cart-item-amount-increase"
+                >
+                  +
+                </button>
+                <span className="quantity-number">{item.quantity}</span>
+                <button 
+                  className="btn"
+                  onClick={() => handleQuantity("-")}
+                  data-testid="cart-item-amount-decrease"
+                >
+                  -
+                </button>
+         </div>
+
+      <div className="cart-image">
+        <img alt={item.product_name} src={item.image} />
+      </div>
     </div>
   );
 }

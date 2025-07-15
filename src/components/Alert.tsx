@@ -1,4 +1,5 @@
 import { useContext } from "react";
+
 import ErrorContext from "../context/ErrorContext";
 
 export default function Alert() {
@@ -19,7 +20,7 @@ export default function Alert() {
     }
 
     return (
-        <div className={`container alert ${ isError ? "alert-danger" : "alert-success" } d-flex justify-content-between`} role="alert">
+        <div className={`container alert ${ isError ? "alert-danger" : "alert-success" }`} role="alert">
             <span>{msg}</span><span onClick={handleClose} style={{ cursor: "pointer" }}>X</span>
         </div>
     );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { ImageType } from '../lib/types'
 
 type Props = {
@@ -23,32 +24,33 @@ export default function ProductImages({ images }: Props) {
   };
 
   return (
-    <div data-testid="product-gallery" className="d-flex product-images-container">
-      <div className="d-flex flex-column me-2 overflow-auto thumbnails-wrapper">
+    <div data-testid="product-gallery" className="image-block">
+      <div className="thumbnail-sidebar">
         {images.map((img, i) => (
           <img
-            alt={`product-image-${i}`}
-            key={img.ID}
-            src={img.URL}
+            alt={`product-image-${i+1}`}
+            key={img.id}
+            src={img.url}
             onClick={() => setCurrentImageIndex(i)}
-            className="img-thumbnail mb-2 thumbnail-img"
-            style={{ cursor: "pointer" }}
+            className="thumbnail"
           />
         ))}
       </div>
 
-      <div className="position-relative main-image-wrapper">
-        <img
-          alt={`product-image-${currentImageIndex}`}
-          src={images[currentImageIndex]?.URL}
-          className="img-fluid main-image w-100"
-        />
-        <button className="carousel-arrow left" onClick={() => handleArrowClick("prev")}>
-          ‹
+      <div className="main-image">
+        <div className="image-container">
+          <img
+            alt={`product-image-${currentImageIndex}`}
+            src={images[currentImageIndex]?.url}
+            className="thumbnail"
+          />
+          <button className="nav left" onClick={() => handleArrowClick("prev")}>
+            &#10094;
+          </button>
+          <button className="nav right" onClick={() => handleArrowClick("next")}>
+            &#10095;
         </button>
-        <button className="carousel-arrow right" onClick={() => handleArrowClick("next")}>
-          ›
-        </button>
+        </div>
       </div>
     </div>
   );
