@@ -1,1 +1,1 @@
-export const HTTP_SERVER = 'http://localhost';
+export const HTTP_SERVER = '';
