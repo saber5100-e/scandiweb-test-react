@@ -140,22 +140,22 @@ export default function CartItem({ item, items, setItems, setTotalQuantity, isLa
        </div>
 
        <div className="item-quantity">
-                <button
-                  className="btn"
-                  onClick={() => handleQuantity("+")}
-                  data-testid="cart-item-amount-increase"
-                >
-                  +
-                </button>
-                <span className="quantity-number">{item.quantity}</span>
-                <button 
-                  className="btn"
-                  onClick={() => handleQuantity("-")}
-                  data-testid="cart-item-amount-decrease"
-                >
-                  -
-                </button>
-         </div>
+          <button
+            className="btn"
+            onClick={() => handleQuantity("+")}
+            data-testid="cart-item-amount-increase"
+          >
+            +
+          </button>
+          <span className="quantity-number">{item.quantity}</span>
+          <button 
+            className="btn"
+            onClick={() => handleQuantity("-")}
+            data-testid="cart-item-amount-decrease"
+          >
+            -
+          </button>
+        </div>
 
       <div className="cart-image">
         <img alt={item.product_name} src={item.image} />
